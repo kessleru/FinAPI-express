@@ -7,6 +7,21 @@ app.use(express.json());
 const port = 5050;
 const custumers = [];
 
+// Middleware
+function verifyIfExistsAccountCPF(req, res, next) {
+  const { cpf } = req.headers;
+
+  const custumer = custumers.find((custumer) => custumer.cpf === cpf);
+
+  if (!custumer) {
+    return res.status(400).json({ error: 'Customer not found' });
+  }
+
+  req.custumer = custumer;
+
+  return next();
+}
+
 /**
  * cpf - string
  * name - string
@@ -34,16 +49,8 @@ app.post('/account', (req, res) => {
   return res.status(201).send();
 });
 
-app.get('/statement', (req, res) => {
-  // Diferenca entre passsar nos headers e params
-  const { cpf } = req.headers;
-
-  const custumer = custumers.find((custumer) => custumer.cpf === cpf);
-
-  if (!custumer) {
-    return response.status(400).json({ error: 'Customer not found' });
-  }
-
+app.get('/statement', verifyIfExistsAccountCPF, (req, res) => {
+  const { custumer } = req;
   return res.json(custumer.statement);
 });
 
