@@ -5,41 +5,54 @@ const app = express();
 app.use(express.json());
 
 const port = 5050;
-const custumers = [];
+const customers = [];
+
+function getBalance(statement) {
+  const balance = statement.reduce((acc, operation) => {
+    return operation.type === 'credit'
+      ? acc + operation.amount
+      : acc - operation.amount;
+  }, 0);
+
+  return balance;
+}
 
 // Middleware
 function verifyIfExistsAccountCPF(req, res, next) {
   const { cpf } = req.headers;
 
-  const custumer = custumers.find((custumer) => custumer.cpf === cpf);
+  const customer = customers.find((custumer) => custumer.cpf === cpf);
 
-  if (!custumer) {
+  if (!customer) {
     return res.status(400).json({ error: 'Customer not found' });
   }
 
-  req.custumer = custumer;
+  req.customer = customer;
 
   return next();
 }
 
+// Account structure
 /**
  * cpf - string
  * name - string
  * id - uuid
  * statement []
  */
+
+// Create an account
 app.post('/account', (req, res) => {
   const { cpf, name } = req.body;
 
-  const custumerAlreadyExists = custumers.some(
+  const customerAlreadyExists = customers.some(
     (custumer) => custumer.cpf === cpf
   );
 
-  if (custumerAlreadyExists) {
-    return res.status(400).json({ error: 'Custumer already exists!' });
+  if (customerAlreadyExists) {
+    return res.status(400).json({ error: 'Customer already exists!' });
   }
 
-  custumers.push({
+  customers.push({
     cpf,
     name,
     id: uuidv4(),
@@ -49,25 +62,48 @@ app.post('/account', (req, res) => {
   return res.status(201).send();
 });
 
+// Search a statement
 app.get('/statement', verifyIfExistsAccountCPF, (req, res) => {
-  const { custumer } = req;
-  return res.json(custumer.statement);
+  const { customer } = req;
+  return res.json(customer.statement);
 });
 
+// Make a deposit to account
 app.post('/deposit', verifyIfExistsAccountCPF, (req, res) => {
   const { description, amount } = req.body;
-  const {custumer} = req;
+  const { customer } = req;
 
   const statementOperation = {
     description,
     amount,
     created_at: new Date(),
-    type: "credit",
-  }
+    type: 'credit',
+  };
 
-  custumer.statement.push(statementOperation);
+  customer.statement.push(statementOperation);
 
   return res.status(201).send();
+});
+
+// Make a withdraw
+app.post('/withdraw', verifyIfExistsAccountCPF, (req, res) => {
+  const { amount } = req.body;
+  const { customer } = req;
+
+  const balance = getBalance();
+
+  if (balance < amount) {
+    return res.status(400).json({ error: 'Insufficient funds!' });
+  }
+
+  const statementOperation = {
+    amount,
+    created_at: new Date(),
+    type: 'debit',
+  };
+
+  customer.statement.push(statementOperation);
+  return response.status(201).send();
 });
 
 app.listen(port);
