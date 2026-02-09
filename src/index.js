@@ -34,4 +34,17 @@ app.post('/account', (req, res) => {
   return res.status(201).send();
 });
 
+app.get('/statement', (req, res) => {
+  // Diferenca entre passsar nos headers e params
+  const { cpf } = req.headers;
+
+  const custumer = custumers.find((custumer) => custumer.cpf === cpf);
+
+  if (!custumer) {
+    return response.status(400).json({ error: 'Customer not found' });
+  }
+
+  return res.json(custumer.statement);
+});
+
 app.listen(port);
