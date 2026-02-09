@@ -7,6 +7,7 @@ app.use(express.json());
 const port = 5050;
 const customers = [];
 
+// Function to obtain account balance
 function getBalance(statement) {
   const balance = statement.reduce((acc, operation) => {
     return operation.type === 'credit'
@@ -104,6 +105,28 @@ app.post('/withdraw', verifyIfExistsAccountCPF, (req, res) => {
 
   customer.statement.push(statementOperation);
   return response.status(201).send();
+});
+
+// Search for a statement by date
+app.get('/statement/date', verifyIfExistsAccountCPF, (req, res) => {
+  const { customer } = req;
+  const { date } = req.query;
+
+  console.log(`date: ${date}`); // returns 2026-02-09
+
+  const dateFormat = new Date(date + ' 00:00');
+
+  console.log(`dateFormat: ${dateFormat}`); // returns 2026-02-09T03:00:00.000Z
+  console.log(`dateFormat.toDateString(): ${dateFormat.toDateString()}`); // returns Sun Feb 09 2026
+
+  const statement = customer.statement.filter((statement) => {
+    console.log(
+      `statement.created_at.toDateString(): ${statement.created_at.toDateString()}`
+    ); // returns Sun Feb 09 2026 (for matching entries)
+    return statement.created_at.toDateString() === dateFormat.toDateString();
+  });
+
+  return res.json(statement);
 });
 
 app.listen(port);
